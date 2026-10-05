@@ -79,12 +79,12 @@ Akun demo hasil seed: `admin@` / `manager@` / `sales@jendelacakra.id`, password 
 ## Deploy ke Render
 
 1. Push repo ini ke GitHub/GitLab.
-2. Di Render: **New → Blueprint**, pilih repo. Render membaca `render.yaml` dan membuat:
-   - `cakracrm-db`: PostgreSQL (database `cakracrm_db`)
+2. Buat database PostgreSQL gratis di [Neon](https://neon.tech) (region AWS Singapore), lalu salin connection string **direct** (bukan `-pooler`) yang diakhiri `?sslmode=require`. Database ada di luar Render karena Render hanya mengizinkan 1 database gratis per workspace.
+3. Di Render: **New → Blueprint**, pilih repo. Render membaca `render.yaml` dan membuat:
    - `cakracrm-backend`: Node web service (`JWT_SECRET` & `JWT_REFRESH_SECRET` di-generate otomatis)
    - `cakracrm-frontend`: static site dengan rewrite SPA
-3. Saat diminta, isi `BOOTSTRAP_ADMIN_EMAIL` dan `BOOTSTRAP_ADMIN_PASSWORD`. Akun ADMIN pertama dibuat otomatis saat server pertama kali start (hanya jika tabel `users` kosong), jadi tidak perlu shell access.
-4. Cek URL yang diberikan Render. Jika berbeda dari `cakracrm-frontend.onrender.com` / `cakracrm-backend.onrender.com`, perbarui:
+4. Isi `DATABASE_URL` (connection string Neon), `BOOTSTRAP_ADMIN_EMAIL` dan `BOOTSTRAP_ADMIN_PASSWORD`. Akun ADMIN pertama dibuat otomatis saat server pertama kali start (hanya jika tabel `users` kosong), jadi tidak perlu shell access.
+5. Cek URL yang diberikan Render. Jika berbeda dari `cakracrm-frontend.onrender.com` / `cakracrm-backend.onrender.com`, perbarui:
    - `CLIENT_URL` di backend → URL frontend (tanpa trailing slash)
    - `VITE_API_BASE_URL` di frontend → `https://<backend>/api`, lalu **redeploy frontend** (variabel Vite dibaca saat build).
 
@@ -105,7 +105,7 @@ Lalu set `CLIENT_URL=https://crm.jendelacakra.id` dan `COOKIE_SAMESITE=lax` di b
 
 | Variabel | Wajib | Keterangan |
 |---|:-:|---|
-| `DATABASE_URL` | ✓ | Connection string PostgreSQL |
+| `DATABASE_URL` | ✓ | Connection string PostgreSQL (Neon: direct + `sslmode=require`) |
 | `JWT_SECRET` | ✓ | ≥ 32 karakter |
 | `JWT_REFRESH_SECRET` | | ≥ 32 karakter; default memakai `JWT_SECRET` |
 | `CLIENT_URL` | ✓ | Origin frontend untuk CORS (dipisah koma) |
