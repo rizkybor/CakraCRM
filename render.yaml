@@ -1,0 +1,79 @@
+# Render Blueprint - CakraCRM (Jendela Cakra Digital)
+# Docs: https://render.com/docs/blueprint-spec
+#
+# Setelah Blueprint dibuat, pastikan URL aktual di dashboard sesuai dengan
+# CLIENT_URL (backend) dan VITE_API_BASE_URL (frontend). Jika Render memberi
+# subdomain berbeda (mis. karena nama sudah dipakai), perbarui kedua nilai itu,
+# lalu redeploy frontend (variabel VITE_* dibaca saat build).
+
+databases:
+  - name: cakracrm-db
+    databaseName: cakracrm_db
+    user: cakracrm
+    plan: free
+    region: singapore
+    postgresMajorVersion: "16"
+
+services:
+  # ---------------------------------------------------------------- Backend API
+  - type: web
+    name: cakracrm-backend
+    runtime: node
+    region: singapore
+    plan: free
+    # --include=dev: TypeScript & @types dibutuhkan saat build, sementara
+    # NODE_ENV=production membuat `npm install` melewati devDependencies.
+    buildCommand: cd backend && npm install --include=dev && npx prisma generate && npm run build
+    startCommand: cd backend && npx prisma migrate deploy && npm run start
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: "22"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: cakracrm-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: CLIENT_URL
+        value: https://cakracrm-frontend.onrender.com
+      # Akun ADMIN pertama dibuat otomatis saat start jika tabel users kosong.
+      # Render akan meminta nilainya saat Blueprint pertama kali dibuat.
+      - key: BOOTSTRAP_ADMIN_EMAIL
+        sync: false
+      - key: BOOTSTRAP_ADMIN_PASSWORD
+        sync: false
+
+  # ------------------------------------------------------------ Frontend (SPA)
+  - type: web
+    name: cakracrm-frontend
+    runtime: static
+    buildCommand: cd frontend && npm install && npm run build
+    staticPublishPath: ./frontend/dist
+    autoDeploy: true
+    envVars:
+      - key: VITE_API_BASE_URL
+        value: https://cakracrm-backend.onrender.com/api
+    routes:
+      # SPA fallback agar deep link (mis. /leads/123) tidak 404
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin
+      - path: /assets/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
