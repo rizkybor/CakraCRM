@@ -4,7 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Loader2 } from 'lucide-react';
 import { GuestRoute, ProtectedRoute, RoleGuard } from '@/components/auth/guards';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { meQueryKey } from '@/hooks/useAuth';
+import { resetSession } from '@/hooks/useAuth';
 import { setSessionExpiredHandler } from '@/lib/api';
 import LoginPage from '@/pages/LoginPage';
 import { ForbiddenPage, NotFoundPage } from '@/pages/StatusPages';
@@ -71,10 +71,7 @@ export default function App() {
   useEffect(() => {
     // When the refresh token is rejected, drop all cached data; ProtectedRoute
     // then redirects to /login because the session query becomes null.
-    setSessionExpiredHandler(() => {
-      qc.clear();
-      qc.setQueryData(meQueryKey, null);
-    });
+    setSessionExpiredHandler(() => resetSession(qc, null));
   }, [qc]);
 
   return <RouterProvider router={router} />;

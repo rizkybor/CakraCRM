@@ -1,8 +1,19 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import type { Role, User } from '@/lib/types';
 
 export const meQueryKey = ['auth', 'me'] as const;
+
+/**
+ * Drops every cached query belonging to the previous user and sets the session.
+ * Never use queryClient.clear() here: it silently cancels an in-flight /auth/me
+ * query (e.g. when a refresh fails during the initial session check) and leaves
+ * the route guards stuck in their loading state.
+ */
+export function resetSession(qc: QueryClient, user: User | null) {
+  qc.removeQueries({ predicate: (q) => q.queryKey[0] !== meQueryKey[0] });
+  qc.setQueryData(meQueryKey, user);
+}
 
 /** Session check: null means "not logged in". */
 export function useMe() {
@@ -30,10 +41,7 @@ export function useLogin() {
       const { data } = await api.post<{ user: User }>('/auth/login', input);
       return data.user;
     },
-    onSuccess: (user) => {
-      qc.clear();
-      qc.setQueryData(meQueryKey, user);
-    },
+    onSuccess: (user) => resetSession(qc, user),
   });
 }
 
@@ -41,10 +49,7 @@ export function useLogout() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: () => api.post('/auth/logout'),
-    onSettled: () => {
-      qc.clear();
-      qc.setQueryData(meQueryKey, null);
-    },
+    onSettled: () => resetSession(qc, null),
   });
 }
 
